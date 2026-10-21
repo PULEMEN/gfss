@@ -1,0 +1,10 @@
+**
+!Dockerfile
+!.dockerignore
+!index.html
+!style.css
+!script.js
+!Иконки/
+!Иконки/**
+!Фоновые изображения/
+!Фоновые изображения/**
