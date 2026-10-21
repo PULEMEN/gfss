@@ -114,3 +114,71 @@ HTML, CSS и JavaScript относятся к сайту Tech Academy. Для п
 
 - [Базовый синтаксис Markdown на GitHub](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax).
 - [Назначение README](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes).
+
+## Запуск в Docker
+
+Лабораторная работа № 7. В контейнер упаковывается статический сайт **Tech Academy** из корня репозитория. Каталог облачных сервисов из Markdown остаётся отдельной частью проекта.
+
+**Статус:** Docker-конфигурация подготовлена и сохранена в GitHub. Сборка образа, запуск контейнера и проверка на ВМ пока не выполнены. Приведённые ниже команды предназначены для реального запуска на Linux с Docker Engine.
+
+### Подготовка
+
+Установите Git, curl и Docker Engine по официальной инструкции для своего дистрибутива. Проверьте Docker:
+
+```bash
+docker --version
+sudo docker run --rm hello-world
+```
+
+Для новой рабочей копии выполните:
+
+```bash
+git clone https://github.com/PULEMEN/gfss.git
+cd gfss
+```
+
+Если проект уже клонирован, перейдите в его каталог, проверьте `git status` и получите актуальные изменения через `git pull --ff-only`. Локальные изменения сначала нужно сохранить.
+
+### Сборка и запуск
+
+```bash
+sudo docker build -t gfss-tech-academy:v1 .
+sudo docker image ls gfss-tech-academy
+sudo docker run -d --name gfss-tech-academy \
+  -p 8080:8000 gfss-tech-academy:v1
+```
+
+Первый порт `8080` относится к хосту Docker (в этой работе к ВМ), второй `8000` - к серверу внутри контейнера. Инструкция `EXPOSE 8000` сама по себе порт хоста не публикует.
+
+### Проверка
+
+```bash
+sudo docker ps --filter name=gfss-tech-academy
+curl -I http://127.0.0.1:8080/
+curl -I http://127.0.0.1:8080/style.css
+sudo docker logs gfss-tech-academy
+```
+
+Ожидаемый результат после фактического запуска: контейнер имеет статус Up, а оба HTTP-запроса возвращают 200. Браузер на ВМ открывает `http://127.0.0.1:8080/`. С хост-компьютера используется `http://IP_ВМ:8080/`, если сетевой режим и firewall разрешают доступ. Сам адрес IP_ВМ нужно заменить реальным.
+
+### Остановка и повторный запуск
+
+```bash
+sudo docker stop gfss-tech-academy
+sudo docker start gfss-tech-academy
+sudo docker ps --filter name=gfss-tech-academy
+curl -I http://127.0.0.1:8080/
+```
+
+Если имя контейнера уже занято, не запускайте второй контейнер с тем же именем: используйте `docker start` для существующего. После изменения сайта пересоберите образ и пересоздайте контейнер, поскольку `docker start` не обновляет его файловую систему из нового образа.
+
+### Устройство образа
+
+- `Dockerfile` берёт Python 3.12 slim, копирует только файлы сайта и запускает стандартный модуль `http.server` от UID 10001.
+- Внешних Python-пакетов для статического сайта нет, поэтому `requirements.txt` и установка Flask не нужны.
+- `.dockerignore` исключает всё, кроме Dockerfile, самого файла исключений и ресурсов сайта. История Git, документы и файлы окружения не передаются как данные сайта.
+- `.gitignore` отдельно исключает распространённые локальные файлы и секреты из новых добавлений в Git. Уже отслеживаемые файлы он не удаляет.
+- Базовый тег `python:3.12-slim` может обновляться. Для строгой фиксации сборки после проверки можно закрепить образ по digest.
+- `http.server` предназначен для учебного запуска. Постоянное промышленное размещение требует подходящего веб-сервера и настроек доступа.
+
+Источники: [Dockerfile reference](https://docs.docker.com/reference/dockerfile/), [Build context и .dockerignore](https://docs.docker.com/build/concepts/context/).
